@@ -1,0 +1,17 @@
+1692202126219	geckodriver	INFO	Listening on 127.0.0.1:47627
+1692202273693	geckodriver	INFO	Listening on 127.0.0.1:44313
+1692297519002	geckodriver	INFO	Listening on 127.0.0.1:44129
+1692297519703	mozrunner::runner	INFO	Running command: MOZ_CRASHREPORTER="1" MOZ_CRASHREPORTER_NO_REPORT="1" MOZ_CRASHREPORTER_SHUTDOWN="1" MOZ_NO_REMOTE="1" "/usr ... te" "--remote-debugging-port" "41835" "--remote-allow-hosts" "localhost" "-no-remote" "-profile" "/tmp/rust_mozprofileDcYSrq"
+Gtk-Message: 21:38:39.879: Not loading module "atk-bridge": The functionality is provided by GTK natively. Please try to not load it.
+1692297602995	geckodriver	INFO	Listening on 127.0.0.1:51301
+1692297603672	mozrunner::runner	INFO	Running command: MOZ_CRASHREPORTER="1" MOZ_CRASHREPORTER_NO_REPORT="1" MOZ_CRASHREPORTER_SHUTDOWN="1" MOZ_NO_REMOTE="1" "/usr ... te" "--remote-debugging-port" "57431" "--remote-allow-hosts" "localhost" "-no-remote" "-profile" "/tmp/rust_mozprofileE3xNAo"
+Gtk-Message: 21:40:03.828: Not loading module "atk-bridge": The functionality is provided by GTK natively. Please try to not load it.
+1692297701322	geckodriver	INFO	Listening on 127.0.0.1:35697
+1692297701986	mozrunner::runner	INFO	Running command: MOZ_CRASHREPORTER="1" MOZ_CRASHREPORTER_NO_REPORT="1" MOZ_CRASHREPORTER_SHUTDOWN="1" MOZ_NO_REMOTE="1" "/usr ... te" "--remote-debugging-port" "58515" "--remote-allow-hosts" "localhost" "-no-remote" "-profile" "/tmp/rust_mozprofile4Ecuo6"
+Gtk-Message: 21:41:42.130: Not loading module "atk-bridge": The functionality is provided by GTK natively. Please try to not load it.
+1692297899234	geckodriver	INFO	Listening on 127.0.0.1:39343
+1692297899889	mozrunner::runner	INFO	Running command: MOZ_CRASHREPORTER="1" MOZ_CRASHREPORTER_NO_REPORT="1" MOZ_CRASHREPORTER_SHUTDOWN="1" MOZ_NO_REMOTE="1" "/usr ... te" "--remote-debugging-port" "47491" "--remote-allow-hosts" "localhost" "-no-remote" "-profile" "/tmp/rust_mozprofilepjM3fZ"
+Gtk-Message: 21:45:00.054: Not loading module "atk-bridge": The functionality is provided by GTK natively. Please try to not load it.
+1692301205995	geckodriver	INFO	Listening on 127.0.0.1:35337
+1692301206665	mozrunner::runner	INFO	Running command: MOZ_CRASHREPORTER="1" MOZ_CRASHREPORTER_NO_REPORT="1" MOZ_CRASHREPORTER_SHUTDOWN="1" MOZ_NO_REMOTE="1" "/usr ... te" "--remote-debugging-port" "52821" "--remote-allow-hosts" "localhost" "-no-remote" "-profile" "/tmp/rust_mozprofilePIjaxw"
+Gtk-Message: 22:40:06.839: Not loading module "atk-bridge": The functionality is provided by GTK natively. Please try to not load it.

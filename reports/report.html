@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <title>report.html</title>
+    <link href="assets/style.css" rel="stylesheet" type="text/css"/></head>
+  <body onLoad="init()">
+    <script>/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this file,
+ * You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+
+function toArray(iter) {
+    if (iter === null) {
+        return null;
+    }
+    return Array.prototype.slice.call(iter);
+}
+
+function find(selector, elem) { // eslint-disable-line no-redeclare
+    if (!elem) {
+        elem = document;
+    }
+    return elem.querySelector(selector);
+}
+
+function findAll(selector, elem) {
+    if (!elem) {
+        elem = document;
+    }
+    return toArray(elem.querySelectorAll(selector));
+}
+
+function sortColumn(elem) {
+    toggleSortStates(elem);
+    const colIndex = toArray(elem.parentNode.childNodes).indexOf(elem);
+    let key;
+    if (elem.classList.contains('result')) {
+        key = keyResult;
+    } else if (elem.classList.contains('links')) {
+        key = keyLink;
+    } else {
+        key = keyAlpha;
+    }
+    sortTable(elem, key(colIndex));
+}
+
+function showAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(showExtras);
+}
+
+function hideAllExtras() { // eslint-disable-line no-unused-vars
+    findAll('.col-result').forEach(hideExtras);
+}
+
+function showExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.remove('collapsed');
+    expandcollapse.classList.remove('expander');
+    expandcollapse.classList.add('collapser');
+}
+
+function hideExtras(colresultElem) {
+    const extras = colresultElem.parentNode.nextElementSibling;
+    const expandcollapse = colresultElem.firstElementChild;
+    extras.classList.add('collapsed');
+    expandcollapse.classList.remove('collapser');
+    expandcollapse.classList.add('expander');
+}
+
+function showFilters() {
+    let visibleString = getQueryParameter('visible') || 'all';
+    visibleString = visibleString.toLowerCase();
+    const checkedItems = visibleString.split(',');
+
+    const filterItems = document.getElementsByClassName('filter');
+    for (let i = 0; i < filterItems.length; i++) {
+        filterItems[i].hidden = false;
+
+        if (visibleString != 'all') {
+            filterItems[i].checked = checkedItems.includes(filterItems[i].getAttribute('data-test-result'));
+            filterTable(filterItems[i]);
+        }
+    }
+}
+
+function addCollapse() {
+    // Add links for show/hide all
+    const resulttable = find('table#results-table');
+    const showhideall = document.createElement('p');
+    showhideall.innerHTML = '<a href="javascript:showAllExtras()">Show all details</a> / ' +
+                            '<a href="javascript:hideAllExtras()">Hide all details</a>';
+    resulttable.parentElement.insertBefore(showhideall, resulttable);
+
+    // Add show/hide link to each result
+    findAll('.col-result').forEach(function(elem) {
+        const collapsed = getQueryParameter('collapsed') || 'Passed';
+        const extras = elem.parentNode.nextElementSibling;
+        const expandcollapse = document.createElement('span');
+        if (extras.classList.contains('collapsed')) {
+            expandcollapse.classList.add('expander');
+        } else if (collapsed.includes(elem.innerHTML)) {
+            extras.classList.add('collapsed');
+            expandcollapse.classList.add('expander');
+        } else {
+            expandcollapse.classList.add('collapser');
+        }
+        elem.appendChild(expandcollapse);
+
+        elem.addEventListener('click', function(event) {
+            if (event.currentTarget.parentNode.nextElementSibling.classList.contains('collapsed')) {
+                showExtras(event.currentTarget);
+            } else {
+                hideExtras(event.currentTarget);
+            }
+        });
+    });
+}
+
+function getQueryParameter(name) {
+    const match = RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return match && decodeURIComponent(match[1].replace(/\+/g, ' '));
+}
+
+function init () { // eslint-disable-line no-unused-vars
+    resetSortHeaders();
+
+    addCollapse();
+
+    showFilters();
+
+    sortColumn(find('.initial-sort'));
+
+    findAll('.sortable').forEach(function(elem) {
+        elem.addEventListener('click',
+            function() {
+                sortColumn(elem);
+            }, false);
+    });
+}
+
+function sortTable(clicked, keyFunc) {
+    const rows = findAll('.results-table-row');
+    const reversed = !clicked.classList.contains('asc');
+    const sortedRows = sort(rows, keyFunc, reversed);
+    /* Whole table is removed here because browsers acts much slower
+     * when appending existing elements.
+     */
+    const thead = document.getElementById('results-table-head');
+    document.getElementById('results-table').remove();
+    const parent = document.createElement('table');
+    parent.id = 'results-table';
+    parent.appendChild(thead);
+    sortedRows.forEach(function(elem) {
+        parent.appendChild(elem);
+    });
+    document.getElementsByTagName('BODY')[0].appendChild(parent);
+}
+
+function sort(items, keyFunc, reversed) {
+    const sortArray = items.map(function(item, i) {
+        return [keyFunc(item), i];
+    });
+
+    sortArray.sort(function(a, b) {
+        const keyA = a[0];
+        const keyB = b[0];
+
+        if (keyA == keyB) return 0;
+
+        if (reversed) {
+            return keyA < keyB ? 1 : -1;
+        } else {
+            return keyA > keyB ? 1 : -1;
+        }
+    });
+
+    return sortArray.map(function(item) {
+        const index = item[1];
+        return items[index];
+    });
+}
+
+function keyAlpha(colIndex) {
+    return function(elem) {
+        return elem.childNodes[1].childNodes[colIndex].firstChild.data.toLowerCase();
+    };
+}
+
+function keyLink(colIndex) {
+    return function(elem) {
+        const dataCell = elem.childNodes[1].childNodes[colIndex].firstChild;
+        return dataCell == null ? '' : dataCell.innerText.toLowerCase();
+    };
+}
+
+function keyResult(colIndex) {
+    return function(elem) {
+        const strings = ['Error', 'Failed', 'Rerun', 'XFailed', 'XPassed',
+            'Skipped', 'Passed'];
+        return strings.indexOf(elem.childNodes[1].childNodes[colIndex].firstChild.data);
+    };
+}
+
+function resetSortHeaders() {
+    findAll('.sort-icon').forEach(function(elem) {
+        elem.parentNode.removeChild(elem);
+    });
+    findAll('.sortable').forEach(function(elem) {
+        const icon = document.createElement('div');
+        icon.className = 'sort-icon';
+        icon.textContent = 'vvv';
+        elem.insertBefore(icon, elem.firstChild);
+        elem.classList.remove('desc', 'active');
+        elem.classList.add('asc', 'inactive');
+    });
+}
+
+function toggleSortStates(elem) {
+    //if active, toggle between asc and desc
+    if (elem.classList.contains('active')) {
+        elem.classList.toggle('asc');
+        elem.classList.toggle('desc');
+    }
+
+    //if inactive, reset all other functions and add ascending active
+    if (elem.classList.contains('inactive')) {
+        resetSortHeaders();
+        elem.classList.remove('inactive');
+        elem.classList.add('active');
+    }
+}
+
+function isAllRowsHidden(value) {
+    return value.hidden == false;
+}
+
+function filterTable(elem) { // eslint-disable-line no-unused-vars
+    const outcomeAtt = 'data-test-result';
+    const outcome = elem.getAttribute(outcomeAtt);
+    const classOutcome = outcome + ' results-table-row';
+    const outcomeRows = document.getElementsByClassName(classOutcome);
+
+    for(let i = 0; i < outcomeRows.length; i++){
+        outcomeRows[i].hidden = !elem.checked;
+    }
+
+    const rows = findAll('.results-table-row').filter(isAllRowsHidden);
+    const allRowsHidden = rows.length == 0 ? true : false;
+    const notFoundMessage = document.getElementById('not-found-message');
+    notFoundMessage.hidden = !allRowsHidden;
+}
+</script>
+    <h1>report.html</h1>
+    <p>Report generated on 17-Aug-2023 at 22:23:57 by <a href="https://pypi.python.org/pypi/pytest-html">pytest-html</a> v3.2.0</p>
+    <h2>Summary</h2>
+    <p>3 tests ran in 16.22 seconds. </p>
+    <p class="filter" hidden="true">(Un)check the boxes to filter the results.</p><input checked="true" class="filter" data-test-result="passed" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="passed">3 passed</span>, <input checked="true" class="filter" data-test-result="skipped" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="skipped">0 skipped</span>, <input checked="true" class="filter" data-test-result="failed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="failed">0 failed</span>, <input checked="true" class="filter" data-test-result="error" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="error">3 errors</span>, <input checked="true" class="filter" data-test-result="xfailed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xfailed">0 expected failures</span>, <input checked="true" class="filter" data-test-result="xpassed" disabled="true" hidden="true" name="filter_checkbox" onChange="filterTable(this)" type="checkbox"/><span class="xpassed">0 unexpected passes</span>
+    <h2>Results</h2>
+    <table id="results-table">
+      <thead id="results-table-head">
+        <tr>
+          <th class="sortable result initial-sort" col="result">Result</th>
+          <th class="sortable" col="name">Test</th>
+          <th class="sortable" col="duration">Duration</th>
+          <th class="sortable links" col="links">Links</th></tr>
+        <tr hidden="true" id="not-found-message">
+          <th colspan="4">No results found. Try to check the filters</th></tr></thead>
+      <tbody class="error results-table-row">
+        <tr>
+          <td class="col-result">Error</td>
+          <td class="col-name">tests/test_login_page.py::TestPositiveScenarios::test_positive_login[firefox]::setup</td>
+          <td class="col-duration">0.60</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">[gw0] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python<br/>[gw0] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python<br/><br/>request = &lt;SubRequest &#x27;driver&#x27; for &lt;Function test_positive_login[firefox]&gt;&gt;<br/><br/>    @pytest.fixture(params=[&quot;chrome&quot;, &quot;firefox&quot;])<br/>    def driver(request):<br/>        # browser = request.config.getoption(&quot;--browser&quot;)<br/>        browser = request.param<br/>        print(f&quot;Creating {browser} driver&quot;)<br/>        if browser == &quot;chrome&quot;:<br/>            my_driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))<br/>        elif browser == &quot;firefox&quot;:<br/>&gt;           my_driver = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()))<br/><br/>tests/conftest.py:17: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/firefox.py:39: in install<br/>    driver_path = self._get_driver_binary_path(self.driver)<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/manager.py:35: in _get_driver_binary_path<br/>    binary_path = self._cache_manager.find_driver(driver)<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/driver_cache.py:105: in find_driver<br/>    driver_version = self.get_cache_key_driver_version(driver)<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/driver_cache.py:151: in get_cache_key_driver_version<br/>    return driver.get_driver_version_to_download()<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/driver.py:48: in get_driver_version_to_download<br/>    return self.get_latest_release_version()<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/drivers/firefox.py:29: in get_latest_release_version<br/>    resp = self._http_client.get(<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/http.py:36: in get<br/>    self.validate_response(resp)<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>resp = &lt;Response [403]&gt;<br/><br/>    @staticmethod<br/>    def validate_response(resp: requests.Response):<br/>        status_code = resp.status_code<br/>        if status_code == 404:<br/>            raise ValueError(f&quot;There is no such driver by url {resp.url}&quot;)<br/>        elif status_code == 401:<br/>            raise ValueError(f&quot;API Rate limit exceeded. You have to add GH_TOKEN!!!&quot;)<br/>        elif resp.status_code != 200:<br/>&gt;           raise ValueError(<br/>                f&quot;response body:\n{resp.text}\n&quot;<br/>                f&quot;request url:\n{resp.request.url}\n&quot;<br/>                f&quot;response headers:\n{dict(resp.headers)}\n&quot;<br/>            )<br/><span class="error">E           ValueError: response body:</span><br/><span class="error">E           {&quot;message&quot;:&quot;API rate limit exceeded for 176.120.106.88. (But here&#x27;s the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)&quot;,&quot;documentation_url&quot;:&quot;https://docs.github.com/rest/overview/resources-in-the-rest-api#rate-limiting&quot;}</span><br/><span class="error">E           </span><br/><span class="error">E           request url:</span><br/><span class="error">E           https://api.github.com/repos/mozilla/geckodriver/releases/latest</span><br/><span class="error">E           response headers:</span><br/><span class="error">E           {&#x27;Date&#x27;: &#x27;Thu, 17 Aug 2023 19:23:41 GMT&#x27;, &#x27;Server&#x27;: &#x27;Varnish&#x27;, &#x27;Strict-Transport-Security&#x27;: &#x27;max-age=31536000; includeSubdomains; preload&#x27;, &#x27;X-Content-Type-Options&#x27;: &#x27;nosniff&#x27;, &#x27;X-Frame-Options&#x27;: &#x27;deny&#x27;, &#x27;X-XSS-Protection&#x27;: &#x27;1; mode=block&#x27;, &#x27;Content-Security-Policy&#x27;: &quot;default-src &#x27;none&#x27;; style-src &#x27;unsafe-inline&#x27;&quot;, &#x27;Access-Control-Allow-Origin&#x27;: &#x27;*&#x27;, &#x27;Access-Control-Expose-Headers&#x27;: &#x27;ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, X-RateLimit-Used, X-RateLimit-Resource, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, Deprecation, Sunset&#x27;, &#x27;Content-Type&#x27;: &#x27;application/json; charset=utf-8&#x27;, &#x27;Referrer-Policy&#x27;: &#x27;origin-when-cross-origin, strict-origin-when-cross-origin&#x27;, &#x27;X-GitHub-Media-Type&#x27;: &#x27;github.v3; format=json&#x27;, &#x27;X-RateLimit-Limit&#x27;: &#x27;60&#x27;, &#x27;X-RateLimit-Remaining&#x27;: &#x27;0&#x27;, &#x27;X-RateLimit-Reset&#x27;: &#x27;1692301029&#x27;, &#x27;X-RateLimit-Resource&#x27;: &#x27;core&#x27;, &#x27;X-RateLimit-Used&#x27;: &#x27;60&#x27;, &#x27;Content-Length&#x27;: &#x27;280&#x27;, &#x27;X-GitHub-Request-Id&#x27;: &#x27;DCCE:2EAE:D6E887A:D8FC78C:64DE73BD&#x27;}</span><br/><br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/http.py:19: ValueError[gw0] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python<br/> -----------------------------Captured stdout setup------------------------------ <br/>Creating firefox driver
+<br/></div></td></tr></tbody>
+      <tbody class="error results-table-row">
+        <tr>
+          <td class="col-result">Error</td>
+          <td class="col-name">tests/test_login_page_negative.py::TestNegativeScenarios::test_negative_login[firefox-student-incorrectPassword-Your password is invalid!]::setup</td>
+          <td class="col-duration">0.54</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">[gw0] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python<br/>[gw0] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python<br/><br/>request = &lt;SubRequest &#x27;driver&#x27; for &lt;Function test_negative_login[firefox-student-incorrectPassword-Your password is invalid!]&gt;&gt;<br/><br/>    @pytest.fixture(params=[&quot;chrome&quot;, &quot;firefox&quot;])<br/>    def driver(request):<br/>        # browser = request.config.getoption(&quot;--browser&quot;)<br/>        browser = request.param<br/>        print(f&quot;Creating {browser} driver&quot;)<br/>        if browser == &quot;chrome&quot;:<br/>            my_driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))<br/>        elif browser == &quot;firefox&quot;:<br/>&gt;           my_driver = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()))<br/><br/>tests/conftest.py:17: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/firefox.py:39: in install<br/>    driver_path = self._get_driver_binary_path(self.driver)<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/manager.py:35: in _get_driver_binary_path<br/>    binary_path = self._cache_manager.find_driver(driver)<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/driver_cache.py:105: in find_driver<br/>    driver_version = self.get_cache_key_driver_version(driver)<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/driver_cache.py:151: in get_cache_key_driver_version<br/>    return driver.get_driver_version_to_download()<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/driver.py:48: in get_driver_version_to_download<br/>    return self.get_latest_release_version()<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/drivers/firefox.py:29: in get_latest_release_version<br/>    resp = self._http_client.get(<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/http.py:36: in get<br/>    self.validate_response(resp)<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>resp = &lt;Response [403]&gt;<br/><br/>    @staticmethod<br/>    def validate_response(resp: requests.Response):<br/>        status_code = resp.status_code<br/>        if status_code == 404:<br/>            raise ValueError(f&quot;There is no such driver by url {resp.url}&quot;)<br/>        elif status_code == 401:<br/>            raise ValueError(f&quot;API Rate limit exceeded. You have to add GH_TOKEN!!!&quot;)<br/>        elif resp.status_code != 200:<br/>&gt;           raise ValueError(<br/>                f&quot;response body:\n{resp.text}\n&quot;<br/>                f&quot;request url:\n{resp.request.url}\n&quot;<br/>                f&quot;response headers:\n{dict(resp.headers)}\n&quot;<br/>            )<br/><span class="error">E           ValueError: response body:</span><br/><span class="error">E           {&quot;message&quot;:&quot;API rate limit exceeded for 176.120.106.88. (But here&#x27;s the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)&quot;,&quot;documentation_url&quot;:&quot;https://docs.github.com/rest/overview/resources-in-the-rest-api#rate-limiting&quot;}</span><br/><span class="error">E           </span><br/><span class="error">E           request url:</span><br/><span class="error">E           https://api.github.com/repos/mozilla/geckodriver/releases/latest</span><br/><span class="error">E           response headers:</span><br/><span class="error">E           {&#x27;Date&#x27;: &#x27;Thu, 17 Aug 2023 19:23:42 GMT&#x27;, &#x27;Server&#x27;: &#x27;Varnish&#x27;, &#x27;Strict-Transport-Security&#x27;: &#x27;max-age=31536000; includeSubdomains; preload&#x27;, &#x27;X-Content-Type-Options&#x27;: &#x27;nosniff&#x27;, &#x27;X-Frame-Options&#x27;: &#x27;deny&#x27;, &#x27;X-XSS-Protection&#x27;: &#x27;1; mode=block&#x27;, &#x27;Content-Security-Policy&#x27;: &quot;default-src &#x27;none&#x27;; style-src &#x27;unsafe-inline&#x27;&quot;, &#x27;Access-Control-Allow-Origin&#x27;: &#x27;*&#x27;, &#x27;Access-Control-Expose-Headers&#x27;: &#x27;ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, X-RateLimit-Used, X-RateLimit-Resource, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, Deprecation, Sunset&#x27;, &#x27;Content-Type&#x27;: &#x27;application/json; charset=utf-8&#x27;, &#x27;Referrer-Policy&#x27;: &#x27;origin-when-cross-origin, strict-origin-when-cross-origin&#x27;, &#x27;X-GitHub-Media-Type&#x27;: &#x27;github.v3; format=json&#x27;, &#x27;X-RateLimit-Limit&#x27;: &#x27;60&#x27;, &#x27;X-RateLimit-Remaining&#x27;: &#x27;0&#x27;, &#x27;X-RateLimit-Reset&#x27;: &#x27;1692301029&#x27;, &#x27;X-RateLimit-Resource&#x27;: &#x27;core&#x27;, &#x27;X-RateLimit-Used&#x27;: &#x27;60&#x27;, &#x27;Content-Length&#x27;: &#x27;280&#x27;, &#x27;X-GitHub-Request-Id&#x27;: &#x27;AD54:53E4:817D24E:82BFD1C:64DE73BE&#x27;}</span><br/><br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/http.py:19: ValueError[gw0] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python<br/> -----------------------------Captured stdout setup------------------------------ <br/>Creating firefox driver
+<br/></div></td></tr></tbody>
+      <tbody class="error results-table-row">
+        <tr>
+          <td class="col-result">Error</td>
+          <td class="col-name">tests/test_login_page_negative.py::TestNegativeScenarios::test_negative_login[firefox-incorrectUser-Password123-Your username is invalid!]::setup</td>
+          <td class="col-duration">1.99</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">[gw1] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python<br/>[gw1] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python<br/><br/>request = &lt;SubRequest &#x27;driver&#x27; for &lt;Function test_negative_login[firefox-incorrectUser-Password123-Your username is invalid!]&gt;&gt;<br/><br/>    @pytest.fixture(params=[&quot;chrome&quot;, &quot;firefox&quot;])<br/>    def driver(request):<br/>        # browser = request.config.getoption(&quot;--browser&quot;)<br/>        browser = request.param<br/>        print(f&quot;Creating {browser} driver&quot;)<br/>        if browser == &quot;chrome&quot;:<br/>            my_driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))<br/>        elif browser == &quot;firefox&quot;:<br/>&gt;           my_driver = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()))<br/><br/>tests/conftest.py:17: <br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/firefox.py:39: in install<br/>    driver_path = self._get_driver_binary_path(self.driver)<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/manager.py:35: in _get_driver_binary_path<br/>    binary_path = self._cache_manager.find_driver(driver)<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/driver_cache.py:105: in find_driver<br/>    driver_version = self.get_cache_key_driver_version(driver)<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/driver_cache.py:151: in get_cache_key_driver_version<br/>    return driver.get_driver_version_to_download()<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/driver.py:48: in get_driver_version_to_download<br/>    return self.get_latest_release_version()<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/drivers/firefox.py:29: in get_latest_release_version<br/>    resp = self._http_client.get(<br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/http.py:36: in get<br/>    self.validate_response(resp)<br/>_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ <br/><br/>resp = &lt;Response [403]&gt;<br/><br/>    @staticmethod<br/>    def validate_response(resp: requests.Response):<br/>        status_code = resp.status_code<br/>        if status_code == 404:<br/>            raise ValueError(f&quot;There is no such driver by url {resp.url}&quot;)<br/>        elif status_code == 401:<br/>            raise ValueError(f&quot;API Rate limit exceeded. You have to add GH_TOKEN!!!&quot;)<br/>        elif resp.status_code != 200:<br/>&gt;           raise ValueError(<br/>                f&quot;response body:\n{resp.text}\n&quot;<br/>                f&quot;request url:\n{resp.request.url}\n&quot;<br/>                f&quot;response headers:\n{dict(resp.headers)}\n&quot;<br/>            )<br/><span class="error">E           ValueError: response body:</span><br/><span class="error">E           {&quot;message&quot;:&quot;API rate limit exceeded for 176.120.106.88. (But here&#x27;s the good news: Authenticated requests get a higher rate limit. Check out the documentation for more details.)&quot;,&quot;documentation_url&quot;:&quot;https://docs.github.com/rest/overview/resources-in-the-rest-api#rate-limiting&quot;}</span><br/><span class="error">E           </span><br/><span class="error">E           request url:</span><br/><span class="error">E           https://api.github.com/repos/mozilla/geckodriver/releases/latest</span><br/><span class="error">E           response headers:</span><br/><span class="error">E           {&#x27;Date&#x27;: &#x27;Thu, 17 Aug 2023 19:23:57 GMT&#x27;, &#x27;Server&#x27;: &#x27;Varnish&#x27;, &#x27;Strict-Transport-Security&#x27;: &#x27;max-age=31536000; includeSubdomains; preload&#x27;, &#x27;X-Content-Type-Options&#x27;: &#x27;nosniff&#x27;, &#x27;X-Frame-Options&#x27;: &#x27;deny&#x27;, &#x27;X-XSS-Protection&#x27;: &#x27;1; mode=block&#x27;, &#x27;Content-Security-Policy&#x27;: &quot;default-src &#x27;none&#x27;; style-src &#x27;unsafe-inline&#x27;&quot;, &#x27;Access-Control-Allow-Origin&#x27;: &#x27;*&#x27;, &#x27;Access-Control-Expose-Headers&#x27;: &#x27;ETag, Link, Location, Retry-After, X-GitHub-OTP, X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset, X-RateLimit-Used, X-RateLimit-Resource, X-OAuth-Scopes, X-Accepted-OAuth-Scopes, X-Poll-Interval, X-GitHub-Media-Type, Deprecation, Sunset&#x27;, &#x27;Content-Type&#x27;: &#x27;application/json; charset=utf-8&#x27;, &#x27;Referrer-Policy&#x27;: &#x27;origin-when-cross-origin, strict-origin-when-cross-origin&#x27;, &#x27;X-GitHub-Media-Type&#x27;: &#x27;github.v3; format=json&#x27;, &#x27;X-RateLimit-Limit&#x27;: &#x27;60&#x27;, &#x27;X-RateLimit-Remaining&#x27;: &#x27;0&#x27;, &#x27;X-RateLimit-Reset&#x27;: &#x27;1692301030&#x27;, &#x27;X-RateLimit-Resource&#x27;: &#x27;core&#x27;, &#x27;X-RateLimit-Used&#x27;: &#x27;60&#x27;, &#x27;Content-Length&#x27;: &#x27;280&#x27;, &#x27;X-GitHub-Request-Id&#x27;: &#x27;DC04:2EAE:D6EB2E7:D8FF251:64DE73CD&#x27;}</span><br/><br/>../../selenium/python-selenium-venv/lib/python3.10/site-packages/webdriver_manager/core/http.py:19: ValueError[gw1] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python<br/> -----------------------------Captured stdout setup------------------------------ <br/>Creating firefox driver
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_login_page_negative.py::TestNegativeScenarios::test_negative_login[chrome-incorrectUser-Password123-Your username is invalid!]</td>
+          <td class="col-duration">6.52</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">[gw2] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python<br/>[gw2] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python[gw2] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python[gw2] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python<br/> -----------------------------Captured stdout setup------------------------------ <br/>Creating chrome driver
+<br/> ----------------------------Captured stdout teardown---------------------------- <br/>Closing chrome driver
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_login_page_negative.py::TestNegativeScenarios::test_negative_login[chrome-student-incorrectPassword-Your password is invalid!]</td>
+          <td class="col-duration">7.03</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">[gw3] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python<br/>[gw3] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python[gw3] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python[gw3] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python<br/> -----------------------------Captured stdout setup------------------------------ <br/>Creating chrome driver
+<br/> ----------------------------Captured stdout teardown---------------------------- <br/>Closing chrome driver
+<br/></div></td></tr></tbody>
+      <tbody class="passed results-table-row">
+        <tr>
+          <td class="col-result">Passed</td>
+          <td class="col-name">tests/test_login_page.py::TestPositiveScenarios::test_positive_login[chrome]</td>
+          <td class="col-duration">13.72</td>
+          <td class="col-links"></td></tr>
+        <tr>
+          <td class="extra" colspan="4">
+            <div class="log">[gw1] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python<br/>[gw1] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python[gw1] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python[gw1] linux -- Python 3.10.12 /home/andredeveider/selenium/python-selenium-venv/bin/python<br/> -----------------------------Captured stdout setup------------------------------ <br/>Creating chrome driver
+<br/> ----------------------------Captured stdout teardown---------------------------- <br/>Closing chrome driver
+<br/></div></td></tr></tbody></table></body></html>
